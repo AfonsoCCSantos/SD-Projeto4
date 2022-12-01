@@ -10,6 +10,7 @@
 
 struct rtree_t {
     struct sockaddr_in* address;
+    char* path;
     int socketfd;
 };
 

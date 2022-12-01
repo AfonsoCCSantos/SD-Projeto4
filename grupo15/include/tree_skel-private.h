@@ -31,7 +31,7 @@ void free_queue();
 */
 void server_kill();
 
-int connect_zookeeper(char* zookeeper_addr_port);
+int connect_zookeeper(char* zookeeper_addr_port, char* server_addr_port);
 
 int create_znode();
 

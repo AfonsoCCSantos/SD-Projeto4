@@ -25,7 +25,7 @@ struct rtree_t *rtree_connect(const char *address_port) {
     } 
     
     struct sockaddr_in server_socket;
-
+    
     server_socket.sin_family = AF_INET;
     server_socket.sin_port = htons(atoi(port));
     if (inet_pton(AF_INET, server, &server_socket.sin_addr) < 1) {
