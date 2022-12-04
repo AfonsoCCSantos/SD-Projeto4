@@ -11,10 +11,126 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <zookeeper/zookeeper.h>
 #include "client_stub.h"
 #include "client_stub-private.h"
 #include "sdmessage.pb-c.h"
 #include "network_client.h"
+
+#define CHAIN_NODE "/chain"
+#define CHILD_NODE_PATH_LEN 12
+
+typedef struct String_vector zoo_string;
+
+static zhandle_t* zh;
+char* curr_path_head;
+char* curr_path_tail;
+
+int children_watcher_client(zhandle_t *wzh, int type, int state, const char *zpath, void *watcher_ctx) {
+    zoo_string* children_list = malloc(sizeof(zoo_string));
+    if (children_list == NULL) return -1;
+    if (state == ZOO_CONNECTED_STATE) {
+        if (type == ZOO_CHILD_EVENT) {
+            if (zoo_wget_children(zh, CHAIN_NODE, children_watcher_client, watcher_ctx, children_list) != ZOK) {
+                return -1;
+            }
+            char* head_path = children_list[0].data;
+            char* tail_path = children_list[0].data;
+            for (int i = 0; i < children_list->count;i++) {
+                char* curr_node_path = children_list[i].data;
+                if (strcmp(curr_node_path,head_path) < 0) {
+                    head_path = curr_node_path;
+                }
+                else if (strcmp(curr_node_path,tail_path) > 0) {
+                    tail_path = curr_node_path;
+                }
+            }
+            if (strcmp(head_path,curr_path_head) != 0) {
+                curr_path_head = head_path;
+                int head_buffer_len = CHILD_NODE_PATH_LEN + 10;
+                char* head_buffer = malloc(head_buffer_len);
+                if (head_buffer == NULL) {
+                    free(children_list);
+                    return -1;
+                }
+                if (zoo_get(zh,head_path,watcher_ctx,head_buffer,&head_buffer_len,NULL) != ZOK) {
+                    free(children_list);
+                    free(head_buffer);
+                    return -1;
+                }
+                update_head(head_buffer);
+            }
+            else if (strcmp(tail_path,curr_path_tail) != 0) {
+                curr_path_tail = tail_path;
+                int tail_buffer_len = CHILD_NODE_PATH_LEN + 10;
+                char* tail_buffer = malloc(tail_buffer_len);
+                if (tail_buffer == NULL) {
+                    free(children_list);
+                    return -1;
+                }
+                if (zoo_get(zh,head_path,watcher_ctx,tail_buffer,&tail_buffer_len,NULL) != ZOK) {
+                    free(children_list);
+                    free(tail_buffer);
+                    return -1;
+                }
+                update_tail(tail_buffer);
+            }
+        }
+    }
+}
+
+int connect_zookeper(char* zookeeper_addr_port) {
+    if (zookeeper_addr_port == NULL) return -1;
+    zh = zookeeper_init(zookeeper_addr_port,NULL,2000,0,NULL,0);
+    if (zh == NULL) return -1;
+    return 0;
+}
+
+int get_head_tail_servers(struct rtree_t** head, struct rtree_t** tail) {
+    zoo_string* children_list = malloc(sizeof(zoo_string));
+    if (children_list == NULL) return -1;
+    static char *watcher_ctx = "ZooKeeper Data Watcher";
+    if (zoo_wget_children(zh, CHAIN_NODE, children_watcher_client, watcher_ctx, children_list) != ZOK) {
+        return -1;
+    }
+    char* head_path = children_list[0].data;
+    char* tail_path = children_list[0].data;
+    for (int i = 0; i < children_list->count;i++) {
+        char* curr_node_path = children_list[i].data;
+        if (strcmp(curr_node_path,head_path) < 0) {
+            head_path = curr_node_path;
+        }
+        else if (strcmp(curr_node_path,tail_path) > 0) {
+            tail_path = curr_node_path;
+        }
+    }
+    int head_buffer_len = CHILD_NODE_PATH_LEN + 10;
+    char* head_buffer = malloc(head_buffer_len);
+    if (head_buffer == NULL) {
+        free(children_list);
+        return -1;
+    }
+    if (zoo_get(zh,head_path,watcher_ctx,head_buffer,&head_buffer_len,NULL) != ZOK) {
+        free(children_list);
+        free(head_buffer);
+        return -1;
+    }
+    int tail_buffer_len = CHILD_NODE_PATH_LEN + 10;
+    char* tail_buffer = malloc(tail_buffer_len);
+    if (tail_buffer == NULL) {
+        free(children_list);
+        free(head_buffer);
+        return -1;
+    }
+    if (zoo_get(zh,head_path,watcher_ctx,tail_buffer,&tail_buffer_len,NULL) != ZOK) {
+        free(children_list);
+        free(head_buffer);
+        free(tail_buffer);
+        return -1;
+    }
+    *head = rtree_connect(head_buffer);
+    *tail = rtree_connect(tail_buffer);
+}
 
 struct rtree_t *rtree_connect(const char *address_port) {
     char* server = strtok((char*) address_port,":");

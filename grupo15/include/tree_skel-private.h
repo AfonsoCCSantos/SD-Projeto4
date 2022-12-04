@@ -37,4 +37,6 @@ int create_znode();
 
 int children_watcher(zhandle_t *wzh, int type, int state, const char *zpath, void *watcher_ctx);
 
+int update_new_server();
+
 #endif

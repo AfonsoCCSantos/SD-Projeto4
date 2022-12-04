@@ -1,5 +1,9 @@
 {
     "files.associations": {
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "client_stub.h": "c",
+        "tree_client-private.h": "c",
+        "data.h": "c",
+        "client_stub-private.h": "c"
     }
 }

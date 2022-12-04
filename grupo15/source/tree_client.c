@@ -13,10 +13,32 @@
 #include "entry.h"
 #include "tree.h"
 #include "tree_client-private.h"
+#include "client_stub-private.h"
 
 #define BAD_FORMAT "Bad format\n"
 
-struct rtree_t* client_stub;
+// struct rtree_t* client_stub;
+struct rtree_t* head;
+struct rtree_t* tail;
+
+int update_head(char* address_port_head) {
+    rtree_disconnect(head); //dar free ao outro anterior
+    head = rtree_connect(address_port_head); 
+    if (head == NULL) {
+        perror("Connection failed\n");
+        exit(-1);
+    }
+}
+
+int update_tail(char* address_port_tail) {
+    rtree_disconnect(tail); //dar free ao outro anterior
+    tail = rtree_connect(address_port_tail); 
+    if (tail == NULL) {
+        perror("Connection failed\n");
+        exit(-1);
+    }
+    return 0;
+}
 
 int main(int argc, char** argv) {
     signal(SIGPIPE, SIG_IGN);
@@ -25,12 +47,24 @@ int main(int argc, char** argv) {
         perror("Missing server and port\n");
         exit(-1);
     }
+    //address_port (ip:porto) do zookeeper
     const char* address_port = argv[1];
-    client_stub = rtree_connect(address_port);
-    if (client_stub == NULL) {
-        perror("Connection failed\n");
+    if (connect_zookeper(address_port) < 0) {
+        perror("Error connecting to zookeeper");
         exit(-1);
     }
+
+    if (get_head_tail_servers(&head, &tail) < 0) {
+        //desconectar de zookeeper
+        perror("Error getting head and tail servers");
+        exit(-1);
+    }
+
+    // client_stub = rtree_connect(address_port);
+    // if (client_stub == NULL) {
+    //     perror("Connection failed\n");
+    //     exit(-1);
+    // }
     
     char line[100];
     const char separator[2] = " ";
@@ -62,7 +96,7 @@ int main(int argc, char** argv) {
                     perror("Entry create failed\n");
                     exit(-1);
                 }
-                if(rtree_put(client_stub,entry) == -1) {
+                if(rtree_put(head,entry) == -1) {
                     perror("Tree put failed\n");
                     exit(-1);
                 }
@@ -76,7 +110,7 @@ int main(int argc, char** argv) {
                 printf(BAD_FORMAT);
             }
             else {
-                struct data_t* data_get = rtree_get(client_stub,key);
+                struct data_t* data_get = rtree_get(tail,key);
                 if (data_get == NULL) {
                     perror("Tree get failed\n");
                     exit(-1); 
@@ -97,19 +131,19 @@ int main(int argc, char** argv) {
                 printf(BAD_FORMAT);
             }
             else {
-                if (rtree_del(client_stub,key) == -1) {
+                if (rtree_del(head,key) == -1) {
                     printf("Key not found\n");
                 }
             }
         }
         else if (strcmp("size",op) == 0) {
-            printf("%d\n",rtree_size(client_stub));
+            printf("%d\n",rtree_size(tail));
         }
         else if (strcmp("height",op) == 0) {
-            printf("%d\n",rtree_height(client_stub));
+            printf("%d\n",rtree_height(tail));
         }
         else if (strcmp("getkeys",op) == 0) {
-            char** keys = rtree_get_keys(client_stub);
+            char** keys = rtree_get_keys(tail);
             if(keys == NULL) {
                 perror("Getkeys failed");
                 exit(-1);
@@ -127,7 +161,7 @@ int main(int argc, char** argv) {
             tree_free_keys(keys);
         } 
         else if (strcmp("getvalues",op) == 0) {
-            void** values = rtree_get_values(client_stub);
+            void** values = rtree_get_values(tail);
              if (values == NULL) {
                 perror("Getvalues failed\n");
                 exit(-1);
@@ -152,7 +186,7 @@ int main(int argc, char** argv) {
                 printf(BAD_FORMAT);
             }
             else {
-                printf("%s\n",rtree_verify(client_stub, atoi(op_n)) ? 
+                printf("%s\n",rtree_verify(tail, atoi(op_n)) ? 
                        "The request has been processed" : "The request has not been processed");
             }
         } 
@@ -163,8 +197,11 @@ int main(int argc, char** argv) {
 }
 
 void disconnect_client() {
-    if (rtree_disconnect(client_stub) == -1) {
-        perror("Error disconnecting the client stub\n");
+    if (rtree_disconnect(head) == -1) {
+        perror("Error disconnecting the head server\n");
+    }
+    if (rtree_disconnect(tail) == -1) {
+        perror("Error disconnecting the tail server\n");
     }
     exit(0);
 }

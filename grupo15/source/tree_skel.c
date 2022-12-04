@@ -40,6 +40,30 @@ static zhandle_t* zh;
 struct rtree_t* next_server = NULL;
 int zid;
 
+int update_new_server() {
+    char** keys = tree_get_keys(tree);
+    if (keys == NULL) return -1;
+    for (int i = 0; keys[i] != NULL; i++) {
+        struct data_t* data = tree_get(tree, keys[i]);
+        if (data == NULL) {
+            tree_free_keys(keys);
+            return -1;
+        }
+        struct entry_t* entry = entry_create(keys[i], data);
+        if (entry == NULL) {
+            tree_free_keys(keys);
+            return -1;
+        }
+        if (rtree_put(next_server, entry) < 0) {
+            free(entry);
+            tree_free_keys(keys);
+            return -1; 
+        }
+    }
+    tree_free_keys(keys);
+    return 0;
+}
+
 int get_zookeeper_id(char* node_path) {
     int i = CHILD_NODE_PATH_LEN;
     while (node_path[i++] == 0);
@@ -76,8 +100,8 @@ int children_watcher(zhandle_t *wzh, int type, int state, const char *zpath, voi
                 return 0;
             }           
             
-            int buffer_next_server_len = 0;
-            char* buffer_next_server = malloc(CHILD_NODE_PATH_LEN + 10);
+            int buffer_next_server_len = CHILD_NODE_PATH_LEN + 10;
+            char* buffer_next_server = malloc(buffer_next_server_len);
             if (buffer_next_server == NULL) {
                 free(children_list);
                 return -1;
@@ -90,7 +114,7 @@ int children_watcher(zhandle_t *wzh, int type, int state, const char *zpath, voi
             
             if (next_server != NULL) {
                 free(next_server->path);
-                free(next_server);
+                rtree_disconnect(next_server);
             }
             next_server = rtree_connect(buffer_next_server);
             if (next_server == NULL) {
@@ -98,7 +122,15 @@ int children_watcher(zhandle_t *wzh, int type, int state, const char *zpath, voi
                 free(buffer_next_server);
                 return -1;
             }
-            next_server->path = buffer_next_server;
+            int path_len = strlen(children_list[current_id_selected].data);
+            next_server->path = malloc(path_len);
+            memcpy(next_server->path,children_list[current_id_selected].data,path_len);
+            if (update_new_server() < 0) {
+                free(buffer_next_server);
+                free(children_list);
+                return -1;
+            }
+            free(buffer_next_server);
         }
     }
     free(children_list);
@@ -162,7 +194,16 @@ int connect_zookeeper(char* zookeeper_addr_port, char* server_addr_port) {
         free(buffer_next_server);
         return -1;
     }
-    next_server->path = buffer_next_server;
+    int path_len = strlen(children_list[current_id_selected].data);
+    next_server->path = malloc(path_len);
+    memcpy(next_server->path,children_list[current_id_selected].data,path_len);
+
+    if (update_new_server() < 0) {
+        free(buffer_next_server);
+        free(children_list);
+        return -1;
+    }
+    free(buffer_next_server);
     free(children_list);
     return 0;   
 
