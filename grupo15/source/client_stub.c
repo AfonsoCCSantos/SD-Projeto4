@@ -31,7 +31,7 @@ int children_watcher_client(zhandle_t *wzh, int type, int state, const char *zpa
     if (children_list == NULL) return -1;
     if (state == ZOO_CONNECTED_STATE) {
         if (type == ZOO_CHILD_EVENT) {
-            if (zoo_wget_children(zh, CHAIN_NODE, children_watcher_client, watcher_ctx, children_list) != ZOK) {
+            if (zoo_wget_children(zh, CHAIN_NODE, &children_watcher_client, watcher_ctx, children_list) != ZOK) {
                 return -1;
             }
             char* head_path = children_list[0].data;
@@ -90,7 +90,7 @@ int get_head_tail_servers(struct rtree_t** head, struct rtree_t** tail) {
     zoo_string* children_list = malloc(sizeof(zoo_string));
     if (children_list == NULL) return -1;
     static char *watcher_ctx = "ZooKeeper Data Watcher";
-    if (zoo_wget_children(zh, CHAIN_NODE, children_watcher_client, watcher_ctx, children_list) != ZOK) {
+    if (zoo_wget_children(zh, CHAIN_NODE, &children_watcher_client, watcher_ctx, children_list) != ZOK) {
         return -1;
     }
     char* head_path = children_list[0].data;
@@ -168,6 +168,11 @@ int rtree_disconnect(struct rtree_t *rtree) {
         return -1; 
     }
     free(rtree);
+    return 0;
+}
+
+int disconnect_zookeeper() {
+    if (zookeeper_close(zh) != ZOK) return -1;
     return 0;
 }
 

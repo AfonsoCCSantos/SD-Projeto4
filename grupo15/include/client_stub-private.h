@@ -21,4 +21,6 @@ int connect_zookeper(char* zookeeper_addr_port);
 
 int get_head_tail_servers(struct rtree_t** head, struct rtree_t** tail);
 
+int disconnect_zookeeper();
+
 #endif

@@ -75,7 +75,7 @@ int children_watcher(zhandle_t *wzh, int type, int state, const char *zpath, voi
     if (children_list == NULL) return -1;
     if (state == ZOO_CONNECTED_STATE) {
         if (type == ZOO_CHILD_EVENT) {
-            if (zoo_wget_children(zh, CHAIN_NODE, children_watcher, watcher_ctx, children_list) != ZOK) {
+            if (zoo_wget_children(zh, CHAIN_NODE, &children_watcher, watcher_ctx, children_list) != ZOK) {
                 return -1;
             }
             int current_id_selected = zid;
@@ -151,7 +151,7 @@ int connect_zookeeper(char* zookeeper_addr_port, char* server_addr_port) {
         return -1;
     }
     static char *watcher_ctx = "ZooKeeper Data Watcher";
-    if (zoo_wget_children(zh, CHAIN_NODE, children_watcher, watcher_ctx, children_list) != ZOK) {
+    if (zoo_wget_children(zh, CHAIN_NODE, &children_watcher, watcher_ctx, children_list) != ZOK) {
         free(children_list);
         zookeeper_close(zh);
         return -1;
@@ -207,7 +207,6 @@ int connect_zookeeper(char* zookeeper_addr_port, char* server_addr_port) {
     free(children_list);
     return 0;   
 
-    //ver o ativar novamente o watch, so para o novo servidor
 }
 
 int create_znode(char* server_addr_port) {
@@ -274,6 +273,7 @@ void tree_skel_destroy() {
     free(op_proc->in_progress);
     free(op_proc);
     free_queue();
+    zookeeper_close(zh);
 }
 
 int invoke(MessageT *msg) {

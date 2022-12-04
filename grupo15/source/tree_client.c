@@ -197,11 +197,13 @@ int main(int argc, char** argv) {
 }
 
 void disconnect_client() {
+    
     if (rtree_disconnect(head) == -1) {
         perror("Error disconnecting the head server\n");
     }
     if (rtree_disconnect(tail) == -1) {
         perror("Error disconnecting the tail server\n");
     }
+    if (disconnect_zookeeper() < 0) exit(-1);
     exit(0);
 }
