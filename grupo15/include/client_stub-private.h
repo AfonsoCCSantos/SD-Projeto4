@@ -15,8 +15,6 @@ struct rtree_t {
     int socketfd;
 };
 
-int children_watcher_client(zhandle_t *wzh, int type, int state, const char *zpath, void *watcher_ctx);
-
 int connect_zookeper(char* zookeeper_addr_port);
 
 int get_head_tail_servers(struct rtree_t** head, struct rtree_t** tail);

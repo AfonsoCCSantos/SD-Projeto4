@@ -17,12 +17,13 @@
 
 #define BAD_FORMAT "Bad format\n"
 
-// struct rtree_t* client_stub;
+//struct rtree_t* client_stub;
 struct rtree_t* head;
 struct rtree_t* tail;
 
-int update_head(char* address_port_head) {
-    rtree_disconnect(head); //dar free ao outro anterior
+void update_head(char* address_port_head) {
+    free(head);
+    //rtree_disconnect(head); //dar free ao outro anterior
     head = rtree_connect(address_port_head); 
     if (head == NULL) {
         perror("Connection failed\n");
@@ -30,14 +31,14 @@ int update_head(char* address_port_head) {
     }
 }
 
-int update_tail(char* address_port_tail) {
-    rtree_disconnect(tail); //dar free ao outro anterior
+void update_tail(char* address_port_tail) {
+    free(tail);
+    //rtree_disconnect(tail); //dar free ao outro anterior
     tail = rtree_connect(address_port_tail); 
     if (tail == NULL) {
         perror("Connection failed\n");
         exit(-1);
     }
-    return 0;
 }
 
 int main(int argc, char** argv) {
@@ -48,12 +49,12 @@ int main(int argc, char** argv) {
         exit(-1);
     }
     //address_port (ip:porto) do zookeeper
-    const char* address_port = argv[1];
+    char* address_port = argv[1];
     if (connect_zookeper(address_port) < 0) {
         perror("Error connecting to zookeeper");
         exit(-1);
     }
-
+    
     if (get_head_tail_servers(&head, &tail) < 0) {
         //desconectar de zookeeper
         perror("Error getting head and tail servers");

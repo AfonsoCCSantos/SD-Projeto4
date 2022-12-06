@@ -12,7 +12,8 @@
 */
 void disconnect_client();
 
-int update_tail(char* address_port_tail);
+void update_tail(char* address_port_tail);
 
-int update_head(char* address_port_head);
+void update_head(char* address_port_head);
+
 #endif

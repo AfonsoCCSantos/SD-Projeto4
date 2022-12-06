@@ -35,7 +35,7 @@ int connect_zookeeper(char* zookeeper_addr_port, char* server_addr_port);
 
 int create_znode();
 
-int children_watcher(zhandle_t *wzh, int type, int state, const char *zpath, void *watcher_ctx);
+//int children_watcher(zhandle_t *wzh, int type, int state, const char *zpath, void *watcher_ctx);
 
 int update_new_server();
 
