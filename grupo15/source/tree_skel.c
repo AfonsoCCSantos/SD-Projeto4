@@ -78,15 +78,19 @@ static void children_watcher(zhandle_t *wzh, int type, int state, const char *zp
             if (zoo_wget_children(zh, CHAIN_NODE, children_watcher, watcher_ctx, children_list) != ZOK) {
                 return;
             }
+            printf("O MEU ZID EH: %d\n", zid);
             int current_id_selected = zid;
             int current_selected_index = 0;
             for (int i = 0; i < children_list->count;i++) {
-                int curr_node_id = get_zookeeper_id(*(children_list[i].data));
-                if (curr_node_id > zid && curr_node_id < current_id_selected) {
+                int curr_node_id = get_zookeeper_id(children_list->data[i]);
+                if (curr_node_id > zid && (curr_node_id < current_id_selected || current_id_selected == zid)) {
                     current_id_selected = curr_node_id;
                     current_selected_index = i;
                 }
             }
+            printf("\n");
+            printf("%d\n", current_id_selected);
+            printf("\n");
             if (current_id_selected == zid) { //Caso em que o servidor tem id mais alto
                 if (next_server != NULL) free(next_server);
                 next_server = NULL;
@@ -95,7 +99,7 @@ static void children_watcher(zhandle_t *wzh, int type, int state, const char *zp
             }
             
             if (next_server != NULL && next_server->path != NULL && 
-                strcmp(next_server->path,*(children_list[current_selected_index].data)) == 0) {
+                strcmp(next_server->path,children_list->data[current_selected_index]) == 0) {
                 //Caso em que servidor ja esta conectado ao servidor com proximo id mais alto
                 return;
             }           
@@ -106,7 +110,13 @@ static void children_watcher(zhandle_t *wzh, int type, int state, const char *zp
                 free(children_list);
                 return;
             } 
-            if (zoo_get(zh,*(children_list[current_selected_index].data),0,buffer_next_server,&buffer_next_server_len,NULL) != ZOK) {
+            char selected_node_path[buffer_next_server_len];
+            sprintf(selected_node_path,"%s/%s",CHAIN_NODE,children_list->data[current_selected_index]);
+            printf("%s\n",selected_node_path);
+            if (zoo_get(zh,selected_node_path,0,buffer_next_server,&buffer_next_server_len,NULL) != ZOK) {
+                printf("\n");
+                printf("entrei no if errado\n");
+                printf("\n");
                 free(children_list);
                 free(buffer_next_server);
                 return;
@@ -117,15 +127,18 @@ static void children_watcher(zhandle_t *wzh, int type, int state, const char *zp
                 free(next_server);
                 //rtree_disconnect(next_server); //Se foi o next server que saiu, nao pode n ser preciso dar disconnect
             }
+            printf("\n");
+            printf("%s\n",buffer_next_server);
+            printf("\n");
             next_server = rtree_connect(buffer_next_server);
             if (next_server == NULL) {
                 free(children_list);
                 free(buffer_next_server);
                 return;
             }
-            int path_len = strlen(*(children_list[current_selected_index].data));
+            int path_len = strlen(children_list->data[current_selected_index]);
             next_server->path = malloc(path_len);
-            memcpy(next_server->path,*(children_list[current_selected_index].data),path_len);
+            memcpy(next_server->path,children_list->data[current_selected_index],path_len);
             // if (update_new_server() < 0) {
             //     free(buffer_next_server);
             //     free(children_list);
@@ -161,14 +174,17 @@ int connect_zookeeper(char* zookeeper_addr_port, char* server_addr_port) {
     int current_id_selected = zid;
     int current_selected_index = 0;
     for (int i = 0; i < children_list->count;i++) {
-        int curr_node_id = get_zookeeper_id(*(children_list[i].data));
+        int curr_node_id = get_zookeeper_id(children_list->data[i]);
         if (curr_node_id > zid && curr_node_id < current_id_selected) {
             current_id_selected = curr_node_id;
             current_selected_index = i;
         }
     }
-
+    
     if (current_id_selected == zid) { //Caso em que o servidor tem id mais alto
+        printf("\n");
+        printf("ACABEI DE CONECTAR AO ZOOKEEPER\n");
+        printf("\n");
         next_server = NULL;
         free(children_list);
         return 0;
@@ -181,7 +197,7 @@ int connect_zookeeper(char* zookeeper_addr_port, char* server_addr_port) {
         free(children_list);
         return -1;
     } 
-    if (zoo_get(zh,*(children_list[current_selected_index].data),0,buffer_next_server,&buffer_next_server_len,NULL) != ZOK) {
+    if (zoo_get(zh,children_list->data[current_selected_index],0,buffer_next_server,&buffer_next_server_len,NULL) != ZOK) {
         zookeeper_close(zh);
         free(children_list);
         free(buffer_next_server); 
@@ -194,9 +210,9 @@ int connect_zookeeper(char* zookeeper_addr_port, char* server_addr_port) {
         free(buffer_next_server);
         return -1;
     }
-    int path_len = strlen(*(children_list[current_selected_index].data));
+    int path_len = strlen(children_list->data[current_selected_index]);
     next_server->path = malloc(path_len);
-    memcpy(next_server->path,*(children_list[current_selected_index].data),path_len);
+    memcpy(next_server->path,children_list->data[current_selected_index],path_len);
 
     // if (update_new_server() < 0) {
     //     free(buffer_next_server);
@@ -205,8 +221,11 @@ int connect_zookeeper(char* zookeeper_addr_port, char* server_addr_port) {
     // }
     free(buffer_next_server);
     free(children_list);
-    return 0;   
 
+    printf("\n");
+    printf("ACABEI DE CONECTAR AO ZOOKEEPER\n");
+    printf("\n");
+    return 0;   
 }
 
 int create_znode(char* server_addr_port) {
@@ -496,14 +515,18 @@ void *process_request (void *params) {
             pthread_mutex_lock(&tree_mutex);
             tree_del(tree,request->key);
             pthread_mutex_unlock(&tree_mutex);
-            rtree_del(next_server, request->key);
+            if (next_server != NULL) {
+                rtree_del(next_server, request->key);
+            }
         }
         else {
             pthread_mutex_lock(&tree_mutex);
             tree_put(tree,request->key,request->data);
             pthread_mutex_unlock(&tree_mutex);
             struct entry_t* entry = entry_create(request->key, request->data);
-            if (rtree_put(next_server, entry) < 0) free(entry);    
+            if (next_server != NULL) {
+                if (rtree_put(next_server, entry) < 0) free(entry);   
+            }
         }
         pthread_mutex_lock(&max_proc_mutex);
         op_proc->max_proc = request->op_n > op_proc->max_proc ? request->op_n : op_proc->max_proc;  

@@ -26,6 +26,37 @@ typedef struct String_vector zoo_string;
 static zhandle_t* zh;
 char* curr_path_head;
 char* curr_path_tail;
+struct rtree_t* head;
+struct rtree_t* tail;
+
+
+struct rtree_t* get_head_server() {
+    return head;
+}
+
+struct rtree_t* get_tail_server() {
+    return tail;
+}
+
+void update_head(char* address_port_head) {
+    free(head);
+    //rtree_disconnect(head); //dar free ao outro anterior
+    head = rtree_connect(address_port_head); 
+    if (head == NULL) {
+        perror("Connection failed\n");
+        exit(-1);
+    }
+}
+
+void update_tail(char* address_port_tail) {
+    free(tail);
+    //rtree_disconnect(tail); //dar free ao outro anterior
+    tail = rtree_connect(address_port_tail); 
+    if (tail == NULL) {
+        perror("Connection failed\n");
+        exit(-1);
+    }
+}
 
 static void children_watcher_client(zhandle_t *wzh, int type, int state, const char *zpath, void *watcher_ctx) {
     zoo_string* children_list = malloc(sizeof(zoo_string));
@@ -35,10 +66,10 @@ static void children_watcher_client(zhandle_t *wzh, int type, int state, const c
             if (zoo_wget_children(zh, CHAIN_NODE, children_watcher_client, watcher_ctx, children_list) != ZOK) {
                 return;
             }
-            char* head_path = *(children_list[0].data);
-            char* tail_path = *(children_list[0].data);
+            char* head_path = children_list->data[0];
+            char* tail_path = children_list->data[0];
             for (int i = 0; i < children_list->count;i++) {
-                char* curr_node_path = *(children_list[i].data);
+                char* curr_node_path = children_list->data[i];
                 if (strcmp(curr_node_path,head_path) < 0) {
                     head_path = curr_node_path;
                 }
@@ -87,7 +118,7 @@ int connect_zookeper(char* zookeeper_addr_port) {
     return 0;
 }
 
-int get_head_tail_servers(struct rtree_t** head, struct rtree_t** tail) {
+int get_head_tail_servers() {
     curr_path_head = malloc(CHILD_NODE_PATH_LEN);
     curr_path_tail = malloc(CHILD_NODE_PATH_LEN);
     zoo_string* children_list = malloc(sizeof(zoo_string));
@@ -96,10 +127,10 @@ int get_head_tail_servers(struct rtree_t** head, struct rtree_t** tail) {
     if (zoo_wget_children(zh, CHAIN_NODE, children_watcher_client, watcher_ctx, children_list) != ZOK) {
         return -1;
     }
-    char* head_path = *(children_list[0].data);
-    char* tail_path = *(children_list[0].data);
+    char* head_path = children_list->data[0];
+    char* tail_path = children_list->data[0];
     for (int i = 0; i < children_list->count;i++) {
-        char* curr_node_path = *(children_list[i].data);
+        char* curr_node_path = children_list->data[i];
         if (strcmp(curr_node_path,head_path) < 0) {
             head_path = curr_node_path;
         }
@@ -133,8 +164,8 @@ int get_head_tail_servers(struct rtree_t** head, struct rtree_t** tail) {
         free(tail_buffer);
         return -1;
     }
-    *head = rtree_connect(head_buffer);
-    *tail = rtree_connect(tail_buffer);
+    head = rtree_connect(head_buffer);
+    tail = rtree_connect(tail_buffer);
     return 0;
 }
 
