@@ -112,11 +112,7 @@ static void children_watcher(zhandle_t *wzh, int type, int state, const char *zp
             } 
             char selected_node_path[buffer_next_server_len];
             sprintf(selected_node_path,"%s/%s",CHAIN_NODE,children_list->data[current_selected_index]);
-            printf("%s\n",selected_node_path);
             if (zoo_get(zh,selected_node_path,0,buffer_next_server,&buffer_next_server_len,NULL) != ZOK) {
-                printf("\n");
-                printf("entrei no if errado\n");
-                printf("\n");
                 free(children_list);
                 free(buffer_next_server);
                 return;
@@ -190,14 +186,16 @@ int connect_zookeeper(char* zookeeper_addr_port, char* server_addr_port) {
         return 0;
     }
     
-    int buffer_next_server_len = 0;
-    char* buffer_next_server = malloc(CHILD_NODE_PATH_LEN + 10);
+    int buffer_next_server_len = CHILD_NODE_PATH_LEN + 10;
+    char* buffer_next_server = malloc(buffer_next_server_len);
     if (buffer_next_server == NULL) {
         zookeeper_close(zh);
         free(children_list);
         return -1;
     } 
-    if (zoo_get(zh,children_list->data[current_selected_index],0,buffer_next_server,&buffer_next_server_len,NULL) != ZOK) {
+    char selected_node_path[buffer_next_server_len];
+    sprintf(selected_node_path,"%s/%s",CHAIN_NODE,children_list->data[current_selected_index]);
+    if (zoo_get(zh,selected_node_path,0,buffer_next_server,&buffer_next_server_len,NULL) != ZOK) {
         zookeeper_close(zh);
         free(children_list);
         free(buffer_next_server); 

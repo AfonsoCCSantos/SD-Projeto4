@@ -19,7 +19,7 @@
 #include "tree_client-private.h"
 
 #define CHAIN_NODE "/chain"
-#define CHILD_NODE_PATH_LEN 12
+#define CHILD_NODE_PATH_LEN 15
 
 typedef struct String_vector zoo_string;
 
@@ -85,7 +85,9 @@ static void children_watcher_client(zhandle_t *wzh, int type, int state, const c
                     free(children_list);
                     return;
                 }
-                if (zoo_get(zh,head_path,0,head_buffer,&head_buffer_len,NULL) != ZOK) {
+                char selected_node_path[head_buffer_len];
+                sprintf(selected_node_path,"%s/%s",CHAIN_NODE,curr_path_head);
+                if (zoo_get(zh,selected_node_path,0,head_buffer,&head_buffer_len,NULL) != ZOK) {
                     free(children_list);
                     free(head_buffer);
                     return;
@@ -100,7 +102,9 @@ static void children_watcher_client(zhandle_t *wzh, int type, int state, const c
                     free(children_list);
                     return;
                 }
-                if (zoo_get(zh,head_path,0,tail_buffer,&tail_buffer_len,NULL) != ZOK) {
+                char selected_node_path[tail_buffer_len];
+                sprintf(selected_node_path,"%s/%s",CHAIN_NODE,curr_path_tail);
+                if (zoo_get(zh,selected_node_path,0,tail_buffer,&tail_buffer_len,NULL) != ZOK) {
                     free(children_list);
                     free(tail_buffer);
                     return;
@@ -146,7 +150,12 @@ int get_head_tail_servers() {
         free(children_list);
         return -1;
     }
-    if (zoo_get(zh,head_path,0,head_buffer,&head_buffer_len,NULL) != ZOK) {
+    char selected_node_path[head_buffer_len];
+    sprintf(selected_node_path,"%s/%s",CHAIN_NODE,curr_path_head);
+    printf("\n");
+    printf("HEAD SERVER:  %s\n", selected_node_path);
+    printf("\n");
+    if (zoo_get(zh,selected_node_path,0,head_buffer,&head_buffer_len,NULL) != ZOK) {
         free(children_list);
         free(head_buffer);
         return -1;
@@ -158,7 +167,11 @@ int get_head_tail_servers() {
         free(head_buffer);
         return -1;
     }
-    if (zoo_get(zh,head_path,0,tail_buffer,&tail_buffer_len,NULL) != ZOK) {
+    sprintf(selected_node_path,"%s/%s",CHAIN_NODE,curr_path_tail);
+    printf("\n");
+    printf("TAIL SERVER:  %s\n", selected_node_path);
+    printf("\n");
+    if (zoo_get(zh,selected_node_path,0,tail_buffer,&tail_buffer_len,NULL) != ZOK) {
         free(children_list);
         free(head_buffer);
         free(tail_buffer);
