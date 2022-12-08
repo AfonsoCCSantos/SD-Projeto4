@@ -85,7 +85,7 @@ int network_main_loop(int listening_socket) {
                 connects[nfds-1].events = POLLIN;
                 connects[nfds-1].revents = 0;
             }
-        }
+        }     
         for (int i = 1; i < nfds; i++) {
             struct pollfd curr_pfd = connects[i];
             if (curr_pfd.revents & POLLIN) {

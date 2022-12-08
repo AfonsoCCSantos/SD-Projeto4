@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <unistd.h>
 #include "client_stub.h"
 #include "data.h"
 #include "entry.h"
@@ -16,30 +17,6 @@
 #include "client_stub-private.h"
 
 #define BAD_FORMAT "Bad format\n"
-
-//struct rtree_t* client_stub;
-// struct rtree_t* head;
-// struct rtree_t* tail;
-
-// void update_head(char* address_port_head) {
-//     free(head);
-//     //rtree_disconnect(head); //dar free ao outro anterior
-//     head = rtree_connect(address_port_head); 
-//     if (head == NULL) {
-//         perror("Connection failed\n");
-//         exit(-1);
-//     }
-// }
-
-// void update_tail(char* address_port_tail) {
-//     free(tail);
-//     //rtree_disconnect(tail); //dar free ao outro anterior
-//     tail = rtree_connect(address_port_tail); 
-//     if (tail == NULL) {
-//         perror("Connection failed\n");
-//         exit(-1);
-//     }
-// }
 
 int main(int argc, char** argv) {
     signal(SIGPIPE, SIG_IGN);
@@ -97,10 +74,18 @@ int main(int argc, char** argv) {
                     perror("Entry create failed\n");
                     exit(-1);
                 }
-                if(rtree_put(get_head_server(),entry) == -1) {
-                    perror("Tree put failed\n");
-                    exit(-1);
+                
+                int op_n = rtree_put(get_head_server(),entry);
+                sleep(1);
+                while (rtree_verify(get_tail_server(), op_n) == 0) {
+                    sleep(1);
+                    rtree_put(get_head_server(),entry);
                 }
+                // if(rtree_put(get_head_server(),entry) == -1) {
+                //     perror("Tree put failed\n");
+                //     exit(-1);
+                // }
+                
                 free(entry->value);
                 free(entry);
             }
@@ -128,13 +113,19 @@ int main(int argc, char** argv) {
         }
         else if (strcmp("del",op) == 0) {
             char* key = strtok(NULL,separator);
-            if(key == NULL){
+            if (key == NULL){
                 printf(BAD_FORMAT);
             }
             else {
-                if (rtree_del(get_head_server(),key) == -1) {
-                    printf("Key not found\n");
+                int op_n = rtree_del(get_head_server(),key);
+                sleep(1);
+                while (rtree_verify(get_tail_server(), op_n) == 0) {
+                    sleep(1);
+                    rtree_del(get_head_server(),key);
                 }
+                // if (rtree_del(get_head_server(),key) == -1) {
+                //     printf("Key not found\n");
+                // }
             }
         }
         else if (strcmp("size",op) == 0) {

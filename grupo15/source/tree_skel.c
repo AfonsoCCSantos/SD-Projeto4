@@ -78,7 +78,6 @@ static void children_watcher(zhandle_t *wzh, int type, int state, const char *zp
             if (zoo_wget_children(zh, CHAIN_NODE, children_watcher, watcher_ctx, children_list) != ZOK) {
                 return;
             }
-            printf("O MEU ZID EH: %d\n", zid);
             int current_id_selected = zid;
             int current_selected_index = 0;
             for (int i = 0; i < children_list->count;i++) {
@@ -88,9 +87,6 @@ static void children_watcher(zhandle_t *wzh, int type, int state, const char *zp
                     current_selected_index = i;
                 }
             }
-            printf("\n");
-            printf("%d\n", current_id_selected);
-            printf("\n");
             if (current_id_selected == zid) { //Caso em que o servidor tem id mais alto
                 if (next_server != NULL) free(next_server);
                 next_server = NULL;
@@ -123,23 +119,21 @@ static void children_watcher(zhandle_t *wzh, int type, int state, const char *zp
                 free(next_server);
                 //rtree_disconnect(next_server); //Se foi o next server que saiu, nao pode n ser preciso dar disconnect
             }
+
             printf("\n");
-            printf("%s\n",buffer_next_server);
+            printf("O meu next server vai ser: %s\n",buffer_next_server);
             printf("\n");
+            
             next_server = rtree_connect(buffer_next_server);
             if (next_server == NULL) {
                 free(children_list);
                 free(buffer_next_server);
                 return;
             }
+
             int path_len = strlen(children_list->data[current_selected_index]);
             next_server->path = malloc(path_len);
             memcpy(next_server->path,children_list->data[current_selected_index],path_len);
-            // if (update_new_server() < 0) {
-            //     free(buffer_next_server);
-            //     free(children_list);
-            //     return -1;
-            // }
             free(buffer_next_server);
         }
     }
@@ -178,9 +172,6 @@ int connect_zookeeper(char* zookeeper_addr_port, char* server_addr_port) {
     }
     
     if (current_id_selected == zid) { //Caso em que o servidor tem id mais alto
-        printf("\n");
-        printf("ACABEI DE CONECTAR AO ZOOKEEPER\n");
-        printf("\n");
         next_server = NULL;
         free(children_list);
         return 0;
@@ -220,9 +211,6 @@ int connect_zookeeper(char* zookeeper_addr_port, char* server_addr_port) {
     free(buffer_next_server);
     free(children_list);
 
-    printf("\n");
-    printf("ACABEI DE CONECTAR AO ZOOKEEPER\n");
-    printf("\n");
     return 0;   
 }
 

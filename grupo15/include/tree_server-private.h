@@ -14,5 +14,7 @@
 */
 void interrupt_server_listen(); 
 
+char* get_server_address(int socket);
+
 
 #endif

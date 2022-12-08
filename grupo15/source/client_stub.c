@@ -152,14 +152,14 @@ int get_head_tail_servers() {
     }
     char selected_node_path[head_buffer_len];
     sprintf(selected_node_path,"%s/%s",CHAIN_NODE,curr_path_head);
-    printf("\n");
-    printf("HEAD SERVER:  %s\n", selected_node_path);
-    printf("\n");
     if (zoo_get(zh,selected_node_path,0,head_buffer,&head_buffer_len,NULL) != ZOK) {
         free(children_list);
         free(head_buffer);
         return -1;
     }
+    printf("\n");
+    printf("HEAD SERVER:  %s\n", head_buffer);
+    printf("\n");
     int tail_buffer_len = 22;//IP:PORTO
     char* tail_buffer = malloc(tail_buffer_len);
     if (tail_buffer == NULL) {
@@ -168,15 +168,15 @@ int get_head_tail_servers() {
         return -1;
     }
     sprintf(selected_node_path,"%s/%s",CHAIN_NODE,curr_path_tail);
-    printf("\n");
-    printf("TAIL SERVER:  %s\n", selected_node_path);
-    printf("\n");
     if (zoo_get(zh,selected_node_path,0,tail_buffer,&tail_buffer_len,NULL) != ZOK) {
         free(children_list);
         free(head_buffer);
         free(tail_buffer);
         return -1;
     }
+    printf("\n");
+    printf("TAIL SERVER:  %s\n", tail_buffer);
+    printf("\n");
     head = rtree_connect(head_buffer);
     tail = rtree_connect(tail_buffer);
     return 0;
@@ -258,7 +258,7 @@ int rtree_put(struct rtree_t *rtree, struct entry_t *entry) {
     }
     printf("Your operation's code: %d\n", rcv_msg->num);
     message_t__free_unpacked(rcv_msg, NULL);
-    return 0;
+    return rcv_msg->num;
 }
 
 struct data_t *rtree_get(struct rtree_t *rtree, char *key) {
@@ -333,9 +333,9 @@ int rtree_del(struct rtree_t *rtree, char *key) {
         return -1;
     }
     printf("Your operation's code: %d\n", rcv_msg->num);
-
+    
     message_t__free_unpacked(rcv_msg, NULL);
-    return 0;
+    return rcv_msg->num;
 }
 
 int rtree_size(struct rtree_t *rtree) {
