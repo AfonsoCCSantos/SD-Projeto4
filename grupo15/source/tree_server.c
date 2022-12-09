@@ -80,12 +80,8 @@ char* get_server_address(int socket) {
     char ip_address[15];
     struct ifreq ifr;
 
-    /*AF_INET - to define network interface IPv4*/
-    /*Creating soket for it.*/
-    
-    /*AF_INET - to define IPv4 Address type.*/
     ifr.ifr_addr.sa_family = AF_INET;
-
+    
     getifaddrs(&addrs);
     tmp = addrs;
     char* res = malloc(15);
@@ -93,15 +89,10 @@ char* get_server_address(int socket) {
 
     while (tmp) {
         if (tmp->ifa_addr && tmp->ifa_addr->sa_family == AF_PACKET) {
-            /*eth0 - define the ifr_name - port name
-            where network attached.*/
             memcpy(ifr.ifr_name, tmp->ifa_name, IFNAMSIZ - 1);
             
-            /*Accessing network interface information by
-            passing address using ioctl.*/
             ioctl(socket, SIOCGIFADDR, &ifr);
             strcpy(ip_address, inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
-            // printf("%s %s\n", tmp->ifa_name,ip_address);
         }
         if (strcmp(ip_address,LOCALHOST) != 0) {
             strcpy(res,ip_address);

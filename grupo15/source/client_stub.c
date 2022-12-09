@@ -24,8 +24,8 @@
 typedef struct String_vector zoo_string;
 
 static zhandle_t* zh;
-char* curr_path_head;
-char* curr_path_tail;
+// char* curr_path_head;
+// char* curr_path_tail;
 struct rtree_t* head;
 struct rtree_t* tail;
 
@@ -39,9 +39,11 @@ struct rtree_t* get_tail_server() {
 }
 
 void update_head(char* address_port_head) {
-    free(head);
-    //rtree_disconnect(head); //dar free ao outro anterior
-    head = rtree_connect(address_port_head); 
+    char* new_path = malloc(strlen(head->path)+1);
+    memcpy(new_path,head->path,strlen(head->path)+1);
+    rtree_disconnect(head); //dar free ao outro anterior
+    head = rtree_connect(address_port_head);
+    head->path = new_path; 
     if (head == NULL) {
         perror("Connection failed\n");
         exit(-1);
@@ -49,9 +51,11 @@ void update_head(char* address_port_head) {
 }
 
 void update_tail(char* address_port_tail) {
-    free(tail);
-    //rtree_disconnect(tail); //dar free ao outro anterior
+    char* new_path = malloc(strlen(tail->path)+1);
+    memcpy(new_path,tail->path,strlen(tail->path)+1);
+    rtree_disconnect(tail); //dar free ao outro anterior
     tail = rtree_connect(address_port_tail); 
+    tail->path = new_path;
     if (tail == NULL) {
         perror("Connection failed\n");
         exit(-1);
@@ -77,8 +81,8 @@ static void children_watcher_client(zhandle_t *wzh, int type, int state, const c
                     tail_path = curr_node_path;
                 }
             }
-            if (strcmp(head_path,curr_path_head) != 0) {
-                memcpy(curr_path_head, head_path, CHILD_NODE_PATH_LEN);
+            if (strcmp(head_path,head->path) != 0) {
+                memcpy(head->path, head_path, CHILD_NODE_PATH_LEN);
                 int head_buffer_len = 22;
                 char* head_buffer = malloc(head_buffer_len);
                 if (head_buffer == NULL) {
@@ -86,7 +90,7 @@ static void children_watcher_client(zhandle_t *wzh, int type, int state, const c
                     return;
                 }
                 char selected_node_path[head_buffer_len];
-                sprintf(selected_node_path,"%s/%s",CHAIN_NODE,curr_path_head);
+                sprintf(selected_node_path,"%s/%s",CHAIN_NODE,head->path);
                 if (zoo_get(zh,selected_node_path,0,head_buffer,&head_buffer_len,NULL) != ZOK) {
                     free(children_list);
                     free(head_buffer);
@@ -94,8 +98,8 @@ static void children_watcher_client(zhandle_t *wzh, int type, int state, const c
                 }
                 update_head(head_buffer);
             }
-            else if (strcmp(tail_path,curr_path_tail) != 0) {
-                memcpy(curr_path_tail, tail_path, CHILD_NODE_PATH_LEN);
+            else if (strcmp(tail_path,tail->path) != 0) {
+                memcpy(tail->path, tail_path, CHILD_NODE_PATH_LEN);
                 int tail_buffer_len = 22;
                 char* tail_buffer = malloc(tail_buffer_len);
                 if (tail_buffer == NULL) {
@@ -103,7 +107,7 @@ static void children_watcher_client(zhandle_t *wzh, int type, int state, const c
                     return;
                 }
                 char selected_node_path[tail_buffer_len];
-                sprintf(selected_node_path,"%s/%s",CHAIN_NODE,curr_path_tail);
+                sprintf(selected_node_path,"%s/%s",CHAIN_NODE,tail->path);
                 if (zoo_get(zh,selected_node_path,0,tail_buffer,&tail_buffer_len,NULL) != ZOK) {
                     free(children_list);
                     free(tail_buffer);
@@ -123,8 +127,6 @@ int connect_zookeper(char* zookeeper_addr_port) {
 }
 
 int get_head_tail_servers() {
-    curr_path_head = malloc(CHILD_NODE_PATH_LEN);
-    curr_path_tail = malloc(CHILD_NODE_PATH_LEN);
     zoo_string* children_list = malloc(sizeof(zoo_string));
     if (children_list == NULL) return -1;
     static char *watcher_ctx = "ZooKeeper Data Watcher";
@@ -142,8 +144,7 @@ int get_head_tail_servers() {
             tail_path = curr_node_path;
         }
     }
-    memcpy(curr_path_head, head_path, CHILD_NODE_PATH_LEN);
-    memcpy(curr_path_tail, tail_path, CHILD_NODE_PATH_LEN);
+    // printf("GET HEAD TAIL SERVERS\n");
     int head_buffer_len = 22; //IP:PORTO
     char* head_buffer = malloc(head_buffer_len);
     if (head_buffer == NULL) {
@@ -151,7 +152,7 @@ int get_head_tail_servers() {
         return -1;
     }
     char selected_node_path[head_buffer_len];
-    sprintf(selected_node_path,"%s/%s",CHAIN_NODE,curr_path_head);
+    sprintf(selected_node_path,"%s/%s",CHAIN_NODE,head_path);
     if (zoo_get(zh,selected_node_path,0,head_buffer,&head_buffer_len,NULL) != ZOK) {
         free(children_list);
         free(head_buffer);
@@ -167,7 +168,7 @@ int get_head_tail_servers() {
         free(head_buffer);
         return -1;
     }
-    sprintf(selected_node_path,"%s/%s",CHAIN_NODE,curr_path_tail);
+    sprintf(selected_node_path,"%s/%s",CHAIN_NODE,tail_path);
     if (zoo_get(zh,selected_node_path,0,tail_buffer,&tail_buffer_len,NULL) != ZOK) {
         free(children_list);
         free(head_buffer);
@@ -179,6 +180,13 @@ int get_head_tail_servers() {
     printf("\n");
     head = rtree_connect(head_buffer);
     tail = rtree_connect(tail_buffer);
+    head->path = malloc(CHILD_NODE_PATH_LEN);
+    tail->path = malloc(CHILD_NODE_PATH_LEN);
+    memcpy(head->path, head_path, CHILD_NODE_PATH_LEN);
+    memcpy(tail->path, tail_path, CHILD_NODE_PATH_LEN);
+    free(head_buffer);
+    free(tail_buffer);
+    free(children_list);
     return 0;
 }
 
@@ -214,9 +222,11 @@ struct rtree_t *rtree_connect(const char *address_port) {
 
 int rtree_disconnect(struct rtree_t *rtree) {
     if (network_close(rtree) < 0 ) {
+        free(rtree->path);
         free(rtree);
         return -1; 
     }
+    free(rtree->path);
     free(rtree);
     return 0;
 }
