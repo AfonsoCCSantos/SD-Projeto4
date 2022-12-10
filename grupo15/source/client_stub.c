@@ -70,6 +70,17 @@ static void children_watcher_client(zhandle_t *wzh, int type, int state, const c
             if (zoo_wget_children(zh, CHAIN_NODE, children_watcher_client, watcher_ctx, children_list) != ZOK) {
                 return;
             }
+            if (children_list->count == 0) {
+                printf("All servers disconnected, client will close!\n");
+                if (rtree_disconnect(get_head_server()) == -1) {
+                    perror("Error disconnecting the head server\n");
+                }
+                if (rtree_disconnect(get_tail_server()) == -1) {
+                    perror("Error disconnecting the tail server\n");
+                }
+                if (disconnect_zookeeper() < 0) exit(-1);
+                exit(0);
+            }
             char* head_path = children_list->data[0];
             char* tail_path = children_list->data[0];
             for (int i = 0; i < children_list->count;i++) {
@@ -151,6 +162,7 @@ int get_head_tail_servers() {
         free(children_list);
         return -1;
     }
+    memset(head_buffer, 0, head_buffer_len);
     char selected_node_path[head_buffer_len];
     sprintf(selected_node_path,"%s/%s",CHAIN_NODE,head_path);
     if (zoo_get(zh,selected_node_path,0,head_buffer,&head_buffer_len,NULL) != ZOK) {
@@ -168,6 +180,7 @@ int get_head_tail_servers() {
         free(head_buffer);
         return -1;
     }
+    memset(tail_buffer, 0, tail_buffer_len);
     sprintf(selected_node_path,"%s/%s",CHAIN_NODE,tail_path);
     if (zoo_get(zh,selected_node_path,0,tail_buffer,&tail_buffer_len,NULL) != ZOK) {
         free(children_list);
@@ -221,6 +234,7 @@ struct rtree_t *rtree_connect(const char *address_port) {
 }
 
 int rtree_disconnect(struct rtree_t *rtree) {
+
     if (network_close(rtree) < 0 ) {
         free(rtree->path);
         free(rtree);
@@ -267,8 +281,9 @@ int rtree_put(struct rtree_t *rtree, struct entry_t *entry) {
         return -1;
     }
     printf("Your operation's code: %d\n", rcv_msg->num);
+    int op_n = rcv_msg->num;
     message_t__free_unpacked(rcv_msg, NULL);
-    return rcv_msg->num;
+    return op_n;
 }
 
 struct data_t *rtree_get(struct rtree_t *rtree, char *key) {
@@ -344,8 +359,9 @@ int rtree_del(struct rtree_t *rtree, char *key) {
     }
     printf("Your operation's code: %d\n", rcv_msg->num);
     
+    int op_n = rcv_msg->num;
     message_t__free_unpacked(rcv_msg, NULL);
-    return rcv_msg->num;
+    return op_n;
 }
 
 int rtree_size(struct rtree_t *rtree) {

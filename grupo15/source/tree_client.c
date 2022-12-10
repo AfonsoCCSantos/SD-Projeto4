@@ -189,7 +189,6 @@ int main(int argc, char** argv) {
 }
 
 void disconnect_client() {
-    
     if (rtree_disconnect(get_head_server()) == -1) {
         perror("Error disconnecting the head server\n");
     }
