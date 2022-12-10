@@ -24,8 +24,6 @@
 typedef struct String_vector zoo_string;
 
 static zhandle_t* zh;
-// char* curr_path_head;
-// char* curr_path_tail;
 struct rtree_t* head;
 struct rtree_t* tail;
 
@@ -96,6 +94,7 @@ static void children_watcher_client(zhandle_t *wzh, int type, int state, const c
                 memcpy(head->path, head_path, CHILD_NODE_PATH_LEN);
                 int head_buffer_len = 22;
                 char* head_buffer = malloc(head_buffer_len);
+                memset(head_buffer, 0, head_buffer_len);
                 if (head_buffer == NULL) {
                     free(children_list);
                     return;
@@ -108,6 +107,7 @@ static void children_watcher_client(zhandle_t *wzh, int type, int state, const c
                     return;
                 }
                 update_head(head_buffer);
+                free(head_buffer);
             }
             else if (strcmp(tail_path,tail->path) != 0) {
                 memcpy(tail->path, tail_path, CHILD_NODE_PATH_LEN);
@@ -125,9 +125,11 @@ static void children_watcher_client(zhandle_t *wzh, int type, int state, const c
                     return;
                 }
                 update_tail(tail_buffer);
+                free(tail_buffer);
             }
         }
     }
+    free(children_list);
 }
 
 int connect_zookeper(char* zookeeper_addr_port) {

@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
     sprintf(server_addr_port,"%s:%s",server_adr ,argv[1]);
     free(server_adr);
     printf("MEU IP:PORT %s\n", server_addr_port);
-    connect_zookeeper(argv[2], server_addr_port);
+    connect_zookeeper(argv[2],  server_addr_port);
     
     
     network_main_loop(socket_escuta);

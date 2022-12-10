@@ -37,12 +37,6 @@ int main(int argc, char** argv) {
         perror("Error getting head and tail servers");
         exit(-1);
     }
-
-    // client_stub = rtree_connect(address_port);
-    // if (client_stub == NULL) {
-    //     perror("Connection failed\n");
-    //     exit(-1);
-    // }
     
     char line[100];
     const char separator[2] = " ";
@@ -80,12 +74,7 @@ int main(int argc, char** argv) {
                 while (rtree_verify(get_tail_server(), op_n) == 0) {
                     sleep(1);
                     rtree_put(get_head_server(),entry);
-                }
-                // if(rtree_put(get_head_server(),entry) == -1) {
-                //     perror("Tree put failed\n");
-                //     exit(-1);
-                // }
-                
+                }               
                 free(entry->value);
                 free(entry);
             }
@@ -123,9 +112,6 @@ int main(int argc, char** argv) {
                     sleep(1);
                     rtree_del(get_head_server(),key);
                 }
-                // if (rtree_del(get_head_server(),key) == -1) {
-                //     printf("Key not found\n");
-                // }
             }
         }
         else if (strcmp("size",op) == 0) {
