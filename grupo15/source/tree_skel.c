@@ -121,6 +121,7 @@ static void children_watcher(zhandle_t *wzh, int type, int state, const char *zp
                 free(children_list);
                 return;
             } 
+            memset(buffer_next_server, 0, buffer_next_server_len);
             char selected_node_path[buffer_next_server_len];
             sprintf(selected_node_path,"%s/%s",CHAIN_NODE,current_path_selected);
             if (zoo_get(zh,selected_node_path,0,buffer_next_server,&buffer_next_server_len,NULL) != ZOK) {

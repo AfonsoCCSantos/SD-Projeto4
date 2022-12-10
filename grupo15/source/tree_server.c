@@ -65,6 +65,7 @@ int main(int argc, char **argv) {
     
     char server_addr_port[15]; // 9 for ip, 4 for port,1 for ':', and 1 for '\0'
     sprintf(server_addr_port,"%s:%s",server_adr ,argv[1]);
+    free(server_adr);
     printf("MEU IP:PORT %s\n", server_addr_port);
     connect_zookeeper(argv[2], server_addr_port);
     
